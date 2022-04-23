@@ -21,55 +21,26 @@ extern "C"
 
 namespace luakit {
 
-#define MAX_LUA_OBJECT_KEY 128
+#define MAX_LUA_META_KEY 128
 
     //异常处理器
     using exception_handler = std::function<void(std::string err)>;
 
-    //定义全局函数和类函数
-    using global_function = std::function<int(lua_State*)>;
-    using object_function = std::function<int(void*, lua_State*)>;
-
-    //类成员（变量、函数）包装器
-    using member_wrapper = std::function<void(lua_State*, void*)>;
-
-    //类成员元素的声
-    struct class_member {
-        bool is_function = false;
-        member_wrapper getter = nullptr;
-        member_wrapper setter = nullptr;
-    };
+    template<typename T>
+    const char* lua_get_meta_name() {
+        static char meta_name[MAX_LUA_META_KEY];
+        using OT = std::remove_cv_t<std::remove_pointer_t<T>>;
+        snprintf(meta_name, MAX_LUA_META_KEY, "__lua_class_meta_%zu__", typeid(OT).hash_code());
+        return meta_name;
+    }
 
     template<typename T>
-    class class_meta
-    {
-    public:
-        static bool is_register() {
-            return m_register;
-        }
-        static void register_meta(const char* name) {
-            if (!m_register) {
-                m_meta_name.append(name).append("__");
-                m_register = true;
-            }
-        }
-        static const char* get_meta_name() {
-            return m_meta_name.c_str();
-        }
-        static const char* get_object_key(void* obj) {
-            static char objkey[MAX_LUA_OBJECT_KEY];
-            snprintf(objkey, MAX_LUA_OBJECT_KEY, "%p@%s", obj, m_meta_name.c_str());
-            return objkey;
-        }
-    private:
-        static bool m_register;
-        static std::string m_meta_name;
-    };
-
-    template<typename T>
-    bool class_meta<T>::m_register = false;
-    template<typename T>
-    std::string class_meta<T>::m_meta_name = "__class_meta_";
+    const char* lua_get_object_key(void* obj) {
+        static char objkey[MAX_LUA_META_KEY];
+        using OT = std::remove_cv_t<std::remove_pointer_t<T>>;
+        snprintf(objkey, MAX_LUA_META_KEY, "%p@%zu", obj, typeid(OT).hash_code());
+        return objkey;
+    }
 
     class lua_guard {
     public:

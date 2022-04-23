@@ -26,6 +26,8 @@ namespace luakit {
         return 0;
     }
 
+    //类成员（变量、函数）包装器
+    using member_wrapper = std::function<void(lua_State*, void*)>;
     //C++函数导出lua辅助器
     struct lua_export_helper {
         template <typename T, typename MT>
@@ -59,6 +61,13 @@ namespace luakit {
             };
         }
     };
+    
+    //类成员元素的声
+    struct class_member {
+        bool is_function = false;
+        member_wrapper getter = nullptr;
+        member_wrapper setter = nullptr;
+    };
 
     template <typename T>
     int lua_class_index(lua_State* L) {
@@ -69,7 +78,7 @@ namespace luakit {
         }
 
         const char* key = lua_tostring(L, 2);
-        const char* meta_name = class_meta<T>::get_meta_name();
+        const char* meta_name = lua_get_meta_name<T>();
         if (!key || !meta_name) {
             lua_pushnil(L);
             return 1;
@@ -94,7 +103,7 @@ namespace luakit {
         if (!obj) return 0;
 
         const char* key = lua_tostring(L, 2);
-        const char* meta_name = class_meta<T>::get_meta_name();
+        const char* meta_name = lua_get_meta_name<T>();
         if (!key || !meta_name) return 0;
 
         luaL_getmetatable(L, meta_name);
@@ -150,10 +159,7 @@ namespace luakit {
     }
 
     template <typename T, typename... arg_types>
-    void lua_wrap_class(lua_State* L, const char* class_name, arg_types... args) {
-        //注册类元表信息
-        class_meta<T>::register_meta(class_name);
-        class_meta<T*>::register_meta(class_name);
+    void lua_wrap_class(lua_State* L, arg_types... args) {
         //创建类元表以及基础元方法
         lua_guard g(L);
         luaL_Reg meta[] = {
@@ -162,7 +168,8 @@ namespace luakit {
             {"__newindex", &lua_class_newindex<T>},
             {NULL, NULL}
         };
-        luaL_newmetatable(L, class_meta<T>::get_meta_name());
+        const char* meta_name = lua_get_meta_name<T>();
+        luaL_newmetatable(L, meta_name);
         luaL_setfuncs(L, meta, 0);
         //注册类成员
         static_assert(sizeof...(args) % 2 == 0, "You must have an even number of arguments for a key, value ... list.");

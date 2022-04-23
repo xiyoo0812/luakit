@@ -15,6 +15,10 @@ namespace luakit {
         return typename function_traits<F>::func(lambda);
     }
 
+    //定义全局函数和类函数
+    using global_function = std::function<int(lua_State*)>;
+    using object_function = std::function<int(void*, lua_State*)>;
+
     //call global function
     //-------------------------------------------------------------------------------
     //辅助调用C++全局函数(normal function)
@@ -72,7 +76,7 @@ namespace luakit {
     template <typename return_type, typename... arg_types>
     global_function lua_adapter(std::function<return_type(arg_types...)> func) {
         return [=](lua_State* L) {
-            return native_to_lua(call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
+            return native_to_lua(L, call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
         };
     }
 
@@ -153,19 +157,19 @@ namespace luakit {
     //push function
     //-------------------------------------------------------------------------------
     //全局函数包装器
-    struct function_wapper final {
-        function_wapper(const global_function& func) : m_func(func) {}
+    struct function_wrapper final {
+        function_wrapper(const global_function& func) : m_func(func) {}
         global_function m_func;
     };
 
     //全局函数闭包
     static int lua_global_bridge(lua_State* L) {
-        auto* wapper = lua_to_object<function_wapper*>(L, lua_upvalueindex(1));
+        auto* wapper = lua_to_object<function_wrapper*>(L, lua_upvalueindex(1));
         return wapper ? wapper->m_func(L) : 0;
     }
 
     void lua_push_function(lua_State* L, global_function func) {
-        lua_push_object(L, new function_wapper(func));
+        lua_push_object(L, new function_wrapper(func));
         lua_pushcclosure(L, lua_global_bridge, 1);
     }
 

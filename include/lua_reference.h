@@ -42,7 +42,6 @@ namespace luakit {
             return ret;
         }
 
-        //¹ØÁªÈÝÆ÷½âÎö
         template <typename associate_type, typename T, typename V>
         associate_type to_associate() {
             lua_guard g(m_L);
@@ -84,14 +83,16 @@ namespace luakit {
     template <typename sequence_type, typename T>
     void lua_new_reference(lua_State* L, sequence_type v) {
         int index = 1;
+        lua_newtable(L);
         for (auto item : v) {
             native_to_lua<T>(L, item);
             lua_seti(L, -2, index++);
         }
     }
 
-    template <typename associate_type, typename T, typename V>
+    template <typename associate_type, typename K, typename V>
     void lua_new_reference(lua_State* L, associate_type v) {
+        lua_newtable(L);
         for (auto item : v) {
             native_to_lua<K>(L, item.first);
             native_to_lua<V>(L, item.second);

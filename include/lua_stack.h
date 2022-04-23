@@ -102,7 +102,7 @@ namespace luakit {
         }
 
         // stack: __objects__
-        const char* pkey = class_meta<T>::get_object_key(obj);
+        const char* pkey = lua_get_object_key<T>(obj);
         if (lua_getfield(L, -1, pkey) != LUA_TTABLE) {
             lua_pop(L, 1);
             lua_newtable(L);
@@ -111,9 +111,8 @@ namespace luakit {
             lua_rawset(L, -3);
 
             // stack: __objects__, tab
-            const char* meta_name = class_meta<T>::get_meta_name();
+            const char* meta_name = lua_get_meta_name<T>();
             luaL_getmetatable(L, meta_name);
-            auto t = lua_type(L, -1);
             lua_setmetatable(L, -2);
 
             // stack: __objects__, tab
@@ -124,7 +123,7 @@ namespace luakit {
     }
 
     template <typename T>
-    void lua_detach(lua_State* L, T obj) {
+    void lua_detach_object(lua_State* L, T obj) {
         if (obj == nullptr)
             return;
 
@@ -135,7 +134,7 @@ namespace luakit {
         }
 
         // stack: __objects__
-        const char* pkey = class_meta<T>::get_object_key(obj);
+        const char* pkey = lua_get_object_key<T>(obj);
         if (lua_getfield(L, -1, pkey) != LUA_TTABLE) {
             lua_pop(L, 2);
             return;
@@ -155,7 +154,7 @@ namespace luakit {
     T lua_to_object(lua_State* L, int idx) {
         T obj = nullptr; 
         idx = lua_normal_index(L, idx);
-        if (lua_istable(L, idx) && class_meta<T>::is_register()) {
+        if (lua_istable(L, idx)) {
             lua_pushstring(L, "__pointer__");
             lua_rawget(L, idx);
             obj = (T)lua_touserdata(L, -1);

@@ -11,13 +11,17 @@ end
 
 print("test_lua_func", test_lua_func(3, 4))
 
-print(ltest.a, ltest.b)
 ltest.fn1()
+print(ltest.a, ltest.b)
 print(ltest.fn2(6))
 print(ltest.b)
 
 test_value = 222
 test_func(22)
+
+print(test_func2(333))
+
+print(testtb.tbf(444))
 
 for k, v in pairs(lvec) do
     print("lvec", k, v)

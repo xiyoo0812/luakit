@@ -9,9 +9,6 @@ namespace luakit {
         kit_state() {
             m_L = luaL_newstate();
             luaL_openlibs(m_L);
-            //注册两个基础类
-            new_class<class_member>("class_member");
-            new_class<function_wapper>("function_wapper");
         }
         kit_state(lua_State* L) : m_L(L) {}
 
@@ -90,14 +87,13 @@ namespace luakit {
         }
 
         template<typename T, typename... arg_types>
-        void new_class(const char* name, arg_types... args) {
-            lua_wrap_class<T>(m_L, name, std::forward<arg_types>(args)...);
+        void new_class(arg_types... args) {
+            lua_wrap_class<T>(m_L, std::forward<arg_types>(args)...);
         }
 
         template <typename T>
         reference new_reference(T v) {
             lua_guard g(m_L);
-            lua_newtable(m_L);
             native_to_lua(m_L, v);
             return reference(m_L);;
         }
@@ -105,15 +101,13 @@ namespace luakit {
         template <typename sequence_type, typename T>
         reference new_reference(sequence_type v) {
             lua_guard g(m_L);
-            lua_newtable(m_L);
             lua_new_reference<sequence_type, T>(m_L, v);
-            return reference(m_L);;
+            return reference(m_L);
         }
 
         template <typename associate_type, typename T, typename V>
         reference new_reference(associate_type v) {
             lua_guard g(m_L);
-            lua_newtable(m_L);
             lua_new_reference<associate_type, K, V>(m_L, v);
             return reference(m_L);;
         }

@@ -53,10 +53,16 @@ int main()
     uint32_t lv2 = 100;
     kit_state.set_function("test_func2", [&](int k) {
         lv2 = k;
+        return k;
         });
 
+    uint32_t lv3 = 100;
     auto tab = kit_state.new_table("testtb");
     tab.set("key", 3);
+    tab.set_function("tbf", [&](int k) {
+        lv3 = k;
+        return k;
+        });
     printf("test table: %d\n", tab.get<uint32_t, string>("key"));
 
     auto enu = kit_state.new_enum("LOG_LEVEL",
@@ -69,15 +75,14 @@ int main()
     );
     printf("test enum: %d\n", enu.get<uint32_t, string>("WARN"));
 
-    kit_state.new_class<luatest>("luatest",
+    kit_state.new_class<luatest>(
         "a", &luatest::a,
         "b", &luatest::b,
         "fn1", &luatest::fn1,
         "fn2", &luatest::fn2
         );
 
-    luatest* lt = new luatest();
-    kit_state.set("ltest", lt);
+    kit_state.set("ltest", new luatest());
 
     auto lvec = vector<int> {1, 2, 3};
     kit_state.set("lvec", kit_state.new_reference<vector<int>, int>(lvec));
@@ -88,6 +93,7 @@ int main()
 
     printf("view test_func: %d\n", lv);
     printf("view test_func2: %d\n", lv2);
+    printf("view tb_func: %d\n", lv3);
 
     uint32_t tv = kit_state.get<uint32_t>("test_value");
     printf("view test_value: %d\n", tv);
