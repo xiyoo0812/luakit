@@ -27,6 +27,10 @@ for k, v in pairs(lvec) do
     print("lvec", k, v)
 end
 
+for k, v in pairs(lmap) do
+    print("lmap", k, v)
+end
+
 lvec2 = { 4, 5, 6}
 
 function lua_gcall(a, b, c)

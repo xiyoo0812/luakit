@@ -1,4 +1,6 @@
 #include "lua_kit.h"
+#include <array>
+#include <unordered_map>
 
 using namespace std;
 
@@ -27,13 +29,9 @@ public:
 };
 
 luakit::variadic_results test_lua_func(lua_State* L, int a, int b) {
-    luakit::variadic_results vr;
     auto kit_state = luakit::kit_state(L);
     printf("call test_lua_func: %d, %d\n", a, b);
-    vr.push_back(kit_state.new_reference(true));
-    vr.push_back(kit_state.new_reference(a + b));
-    vr.push_back(kit_state.new_reference("ssssss"));
-    return vr;
+    return kit_state.as_return(true, a + b, "sssss");
 }
 
 int main()
@@ -84,8 +82,11 @@ int main()
 
     kit_state.set("ltest", new luatest());
 
-    auto lvec = vector<int> {1, 2, 3};
-    kit_state.set("lvec", kit_state.new_reference<vector<int>, int>(lvec));
+    auto lvec = std::array<int, 3> {1, 2, 3};
+    kit_state.set("lvec", lvec);
+
+    auto lmap = unordered_map<int, string>{ {1, "s"},{2, "a"}, {3, "v"}};
+    kit_state.set("lmap", lmap);
 
     kit_state.run_file("test.lua", [](std::string err) {
         printf("run_file failed: %s\n", err.c_str());

@@ -95,21 +95,13 @@ namespace luakit {
         reference new_reference(T v) {
             lua_guard g(m_L);
             native_to_lua(m_L, v);
-            return reference(m_L);;
-        }
-
-        template <typename sequence_type, typename T>
-        reference new_reference(sequence_type v) {
-            lua_guard g(m_L);
-            lua_new_reference<sequence_type, T>(m_L, v);
             return reference(m_L);
         }
 
-        template <typename associate_type, typename T, typename V>
-        reference new_reference(associate_type v) {
-            lua_guard g(m_L);
-            lua_new_reference<associate_type, K, V>(m_L, v);
-            return reference(m_L);;
+        template<typename... arg_types>
+        variadic_results as_return(arg_types... args) {
+            variadic_results vr = { new_reference<arg_types>(args)... };
+            return vr;
         }
 
     protected:

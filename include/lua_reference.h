@@ -8,10 +8,11 @@ namespace luakit {
         reference(lua_State* L) : m_L(L) {
             m_index = luaL_ref(m_L, LUA_REGISTRYINDEX);
         }
-        reference(reference& ref) noexcept {
+        reference(const reference& ref) noexcept {
             m_L = ref.m_L;
-            m_index = ref.m_index;
-            ref.m_index = LUA_NOREF;
+            lua_guard g(m_L);
+            lua_rawgeti(m_L, LUA_REGISTRYINDEX, ref.m_index);
+            m_index = luaL_ref(m_L, LUA_REGISTRYINDEX);
         }
         reference(reference&& ref) noexcept {
             m_L = ref.m_L;
@@ -63,7 +64,6 @@ namespace luakit {
     };
 
     using variadic_results = std::vector<reference>;
-
     template <> int native_to_lua(lua_State* L, variadic_results vr) {
         for (auto r : vr) {
             r.push_stack();
@@ -78,25 +78,5 @@ namespace luakit {
 
     template <> reference lua_to_native(lua_State* L, int i) {
         return reference(L);
-    }
-
-    template <typename sequence_type, typename T>
-    void lua_new_reference(lua_State* L, sequence_type v) {
-        int index = 1;
-        lua_newtable(L);
-        for (auto item : v) {
-            native_to_lua<T>(L, item);
-            lua_seti(L, -2, index++);
-        }
-    }
-
-    template <typename associate_type, typename K, typename V>
-    void lua_new_reference(lua_State* L, associate_type v) {
-        lua_newtable(L);
-        for (auto item : v) {
-            native_to_lua<K>(L, item.first);
-            native_to_lua<V>(L, item.second);
-            lua_settable(L, -3);
-        }
     }
 }
