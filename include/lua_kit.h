@@ -61,13 +61,13 @@ namespace luakit {
         
         bool run_file(const char* filename, exception_handler handler = nullptr) {
             lua_guard g(m_L);
-            if (luaL_loadfile(m_L, filename) || lua_pcall(m_L, 0, 0, -1)) {
+            if (luaL_loadfile(m_L, filename)) {
                 if (handler) {
                     handler(lua_tostring(m_L, -1));
                 }
                 return false;
             }
-            return true;
+            return lua_call_function(m_L, handler, 0, 0);
         }
 
         bool run_script(std::string& script, exception_handler handler = nullptr) {
@@ -76,13 +76,13 @@ namespace luakit {
 
         bool run_script(const char* script, exception_handler handler = nullptr) {
             lua_guard g(m_L);
-            if (luaL_loadstring(m_L, script) || lua_pcall(m_L, 0, 0, -1)) {
+            if (luaL_loadstring(m_L, script)) {
                 if (handler) {
                     handler(lua_tostring(m_L, -1));
                 }
                 return false;
             }
-            return true;
+            return lua_call_function(m_L, handler, 0, 0);
         }
 
         lua_table new_table(const char* name = nullptr) {
