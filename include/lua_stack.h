@@ -24,6 +24,9 @@ namespace luakit {
         else if constexpr (std::is_floating_point_v<T>) {
             return (T)lua_tonumber(L, i);
         }
+        else if constexpr (std::is_enum<T>::value) {
+            return (T)lua_tonumber(L, i);
+        }
         else if constexpr (std::is_pointer_v<T>) {
             using type = std::remove_volatile_t<std::remove_pointer_t<T>>;
             if constexpr (std::is_same_v<type, const char>) {
@@ -145,7 +148,7 @@ namespace luakit {
         return 1;
     }
 
-    int lua_normal_index(lua_State* L, int idx) {
+    inline int lua_normal_index(lua_State* L, int idx) {
         int top = lua_gettop(L);
         if (idx < 0 && -idx <= top)
             return idx + top + 1;

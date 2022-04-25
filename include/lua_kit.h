@@ -9,8 +9,14 @@ namespace luakit {
         kit_state() {
             m_L = luaL_newstate();
             luaL_openlibs(m_L);
+            new_class<class_member>();
+            new_class<function_wrapper>();
         }
         kit_state(lua_State* L) : m_L(L) {}
+
+        void close() {
+            lua_close(m_L);
+        }
 
         template<typename T>
         void set(const char* name, T obj) {
@@ -31,6 +37,11 @@ namespace luakit {
             lua_setglobal(m_L, function);
         }
 
+        bool get_function(const char* function) {
+            get_global_function(m_L, function);
+            return lua_isfunction(m_L, -1);
+        }
+
         template <typename... ret_types, typename... arg_types>
         bool call(const char* function, exception_handler handler, std::tuple<ret_types&...>&& rets, arg_types... args) {
             return call_global_function(m_L, function, handler, std::forward<std::tuple<ret_types&...>>(rets), std::forward<arg_types>(args)...);
@@ -40,6 +51,14 @@ namespace luakit {
             return call(function, handler, std::tie());
         }
 
+        bool call(exception_handler handler = nullptr) {
+            return lua_call_function(m_L, handler, std::tie());
+        }
+        
+        bool run_file(std::string& filename, exception_handler handler = nullptr) {
+            return run_file(filename.c_str(), handler);
+        }
+        
         bool run_file(const char* filename, exception_handler handler = nullptr) {
             lua_guard g(m_L);
             if (luaL_loadfile(m_L, filename) || lua_pcall(m_L, 0, 0, -1)) {
@@ -49,6 +68,10 @@ namespace luakit {
                 return false;
             }
             return true;
+        }
+
+        bool run_script(std::string& script, exception_handler handler = nullptr) {
+            return run_script(script.c_str(), handler);
         }
 
         bool run_script(const char* script, exception_handler handler = nullptr) {

@@ -58,6 +58,10 @@ namespace luakit {
             return lua_call_function(m_L, handler, std::tie());
         }
 
+        bool call(exception_handler handler = nullptr) {
+            return lua_call_function(m_L, handler, std::tie());
+        }
+
         void create_with() {}
 
         template <typename... arg_types>
@@ -67,17 +71,26 @@ namespace luakit {
         }
 
         template <typename... enum_value>
-        void new_enum(enum_value... args) {
-            create_with(std::forward<enum_value>(args)...);
+        lua_table new_enum(const char* name, enum_value... args) {
+            lua_guard g(m_L);
+            lua_rawgeti(m_L, LUA_REGISTRYINDEX, m_index);
+            lua_newtable(m_L);
+            lua_pushstring(m_L, name);
+            lua_pushvalue(m_L, -2);
+            lua_settable(m_L, -4);
+            auto table = lua_table(m_L);
+            table.create_with(std::forward<enum_value>(args)...);
+            return table;
         }
     };
 
-    template <> int native_to_lua(lua_State* L, lua_table tb) {
-        tb.push_stack();
-        return 1;
+    template <> 
+    inline int native_to_lua(lua_State* L, lua_table tb) {
+        return tb.push_stack();
     }
 
-    template <> lua_table lua_to_native(lua_State* L, int i) {
+    template <> 
+    inline lua_table lua_to_native(lua_State* L, int i) {
         return lua_table(L);
     }
 }

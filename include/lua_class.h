@@ -17,7 +17,7 @@ namespace luakit {
         enum { value = std::is_same<decltype(check_gc<T>(0)), std::true_type>::value };
     };
 
-    int lua_object_bridge(lua_State* L) {
+    inline int lua_object_bridge(lua_State* L) {
         void* obj = lua_touserdata(L, lua_upvalueindex(1));
         object_function* func = (object_function*)lua_touserdata(L, lua_upvalueindex(2));
         if (obj != nullptr && func != nullptr) {
@@ -138,7 +138,7 @@ namespace luakit {
 
     //class memeber wrapper
     //-------------------------------------------------------------------------------
-    void lua_wrap_member(lua_State* L) {}
+    inline void lua_wrap_member(lua_State* L) {}
 
     template <typename MT>
     void lua_wrap_member(lua_State* L, const char* name, MT member) {

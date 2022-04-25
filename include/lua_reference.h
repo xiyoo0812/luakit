@@ -24,8 +24,9 @@ namespace luakit {
                 luaL_unref(m_L, LUA_REGISTRYINDEX, m_index);
             }
         }
-        void push_stack() const {
+        int push_stack() const {
             lua_rawgeti(m_L, LUA_REGISTRYINDEX, m_index);
+            return 1;
         }
 
         template <typename sequence_type, typename T>
@@ -64,19 +65,22 @@ namespace luakit {
     };
 
     using variadic_results = std::vector<reference>;
-    template <> int native_to_lua(lua_State* L, variadic_results vr) {
+
+    template <> 
+    inline int native_to_lua(lua_State* L, variadic_results vr) {
         for (auto r : vr) {
             r.push_stack();
         }
         return (int)vr.size();
     }
 
-    template <> int native_to_lua(lua_State* L, reference r) {
-        r.push_stack();
-        return 1;
+    template <> 
+    inline int native_to_lua(lua_State* L, reference r) {
+        return r.push_stack();
     }
 
-    template <> reference lua_to_native(lua_State* L, int i) {
+    template <> 
+    inline reference lua_to_native(lua_State* L, int i) {
         return reference(L);
     }
 }
