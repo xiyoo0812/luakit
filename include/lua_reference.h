@@ -44,16 +44,16 @@ namespace luakit {
             return ret;
         }
 
-        template <typename associate_type, typename T, typename V>
+        template <typename associate_type, typename K, typename V>
         associate_type to_associate() {
             lua_guard g(m_L);
-            sequence_type ret;
+            associate_type ret;
             lua_rawgeti(m_L, LUA_REGISTRYINDEX, m_index);
             if (lua_istable(m_L, -1)) {
-                lua_pushnil(L);
-                while (lua_next(L, -2) != 0) {
-                    ret.insert(std::make_pair(lua_to_native<K>(L, -2), lua_to_native<V>(L, -1)));
-                    lua_pop(L, 1);
+                lua_pushnil(m_L);
+                while (lua_next(m_L, -2) != 0) {
+                    ret.insert(std::make_pair(lua_to_native<K>(m_L, -2), lua_to_native<V>(m_L, -1)));
+                    lua_pop(m_L, 1);
                 }
             }
             return ret;

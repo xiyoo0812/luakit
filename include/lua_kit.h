@@ -55,7 +55,7 @@ namespace luakit {
             return lua_call_function(m_L, handler, std::tie());
         }
         
-        bool run_file(std::string& filename, exception_handler handler = nullptr) {
+        bool run_file(const std::string& filename, exception_handler handler = nullptr) {
             return run_file(filename.c_str(), handler);
         }
         
@@ -70,7 +70,7 @@ namespace luakit {
             return lua_call_function(m_L, handler, 0, 0);
         }
 
-        bool run_script(std::string& script, exception_handler handler = nullptr) {
+        bool run_script(const std::string& script, exception_handler handler = nullptr) {
             return run_script(script.c_str(), handler);
         }
 

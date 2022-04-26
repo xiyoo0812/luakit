@@ -77,7 +77,7 @@ namespace luakit {
     }
 
     //std::array
-    template <typename T, std::size_t N, template<typename T, std::size_t N> typename TTP>
+    template <typename T, std::size_t N, template<typename TE, std::size_t TN> typename TTP>
     int native_to_lua(lua_State* L, TTP<T, N> v) {
         uint32_t index = 1;
         lua_newtable(L);
@@ -89,7 +89,7 @@ namespace luakit {
     }
 
     //std::vector/std::list/std::deque/std::forward_list
-    template <typename T, template<typename T, typename Alloc = std::allocator<T>> typename TTP>
+    template <typename T, template<typename TE, typename A = std::allocator<TE>> typename TTP>
     int native_to_lua(lua_State* L, TTP<T> v) {
         uint32_t index = 1;
         lua_newtable(L);
@@ -101,7 +101,7 @@ namespace luakit {
     }
 
     //std::set/std::multiset
-    template <typename T, template<typename T, typename C = std::less<T>, typename A = std::allocator<T>> typename TTP>
+    template <typename T, template<typename TE, typename C = std::less<TE>, typename A = std::allocator<TE>> typename TTP>
     int native_to_lua(lua_State* L, TTP<T> v) {
         uint32_t index = 1;
         lua_newtable(L);
@@ -113,7 +113,7 @@ namespace luakit {
     }
 
     //std::unordered_set/std::unordered_multiset
-    template <typename T, template<typename T, typename H = std::hash<T>, typename E = std::equal_to<T>, typename A = std::allocator<T>> typename TTP>
+    template <typename T, template<typename TE, typename H = std::hash<TE>, typename E = std::equal_to<TE>, typename A = std::allocator<TE>> typename TTP>
     int native_to_lua(lua_State* L, TTP<T> v) {
         uint32_t index = 1;
         lua_newtable(L);
@@ -125,7 +125,7 @@ namespace luakit {
     }
 
     //std::map/std::multimap
-    template <typename T, typename K, template<typename K, typename T, typename C = std::less<K>, typename A = std::allocator<std::pair<const K, T>>> typename TTP>
+    template <typename T, typename K, template<typename TK, typename TV, typename C = std::less<TK>, typename A = std::allocator<std::pair<const TK, TV>>> typename TTP>
     int native_to_lua(lua_State* L, TTP<K, T> v) {
         lua_newtable(L);
         for (auto item : v) {
@@ -137,7 +137,7 @@ namespace luakit {
     }
 
     //std::unordered_map/std::unordered_multimap
-    template <typename T, typename K, template<typename K, typename T, typename H = std::hash<K>, typename E = std::equal_to<K>, typename A = std::allocator<std::pair<const K, T>>> typename TTP>
+    template <typename T, typename K, template<typename TK, typename TV, typename H = std::hash<TK>, typename E = std::equal_to<TK>, typename A = std::allocator<std::pair<const TK, TV>>> typename TTP>
     int native_to_lua(lua_State* L, TTP<K, T> v) {
         lua_newtable(L);
         for (auto item : v) {
