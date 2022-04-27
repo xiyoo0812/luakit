@@ -38,6 +38,11 @@ namespace luakit {
         return func(lua_to_native<arg_types>(L, integers + 1)...);
     }
     
+    //辅助调用C++全局函数(std::function)
+    template<size_t... integers, typename return_type, typename... arg_types>
+    inline return_type call_helper(lua_State* L, std::function<return_type(lua_State*, arg_types...)> func, std::index_sequence<integers...>&&) {
+        return func(L, lua_to_native<arg_types>(L, integers + 1)...);
+    }
 
     //call object function
     //-------------------------------------------------------------------------------
@@ -77,9 +82,25 @@ namespace luakit {
         };
     }
 
+    //适配特殊lua的CAPI编写的全局函数
+    template <typename return_type, typename... arg_types>
+    inline global_function lua_adapter(return_type(*func)(lua_State*, arg_types...)) {
+        return [=](lua_State* L) {
+            return native_to_lua(L, call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
+        };
+    }
+
     //适配有返回值std::function全局函数（C++只能返回一个值）
     template <typename return_type, typename... arg_types>
     inline global_function lua_adapter(std::function<return_type(arg_types...)> func) {
+        return [=](lua_State* L) {
+            return native_to_lua(L, call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
+        };
+    }
+
+    //适配有返回值std::function全局函数（C++只能返回一个值）
+    template <typename return_type, typename... arg_types>
+    inline global_function lua_adapter(std::function<return_type(lua_State*, arg_types...)> func) {
         return [=](lua_State* L) {
             return native_to_lua(L, call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
         };
@@ -91,14 +112,6 @@ namespace luakit {
         return [=](lua_State* L) {
             call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>());
             return 0;
-        };
-    }
-
-    //适配特殊lua的CAPI编写的全局函数
-    template <typename return_type, typename... arg_types>
-    inline global_function lua_adapter(return_type(*func)(lua_State*, arg_types...)) {
-        return [=](lua_State* L) {
-            return native_to_lua(L, call_helper(L, func, std::make_index_sequence<sizeof...(arg_types)>()));
         };
     }
 
