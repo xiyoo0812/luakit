@@ -148,13 +148,6 @@ namespace luakit {
         return 1;
     }
 
-    inline int lua_normal_index(lua_State* L, int idx) {
-        int top = lua_gettop(L);
-        if (idx < 0 && -idx <= top)
-            return idx + top + 1;
-        return idx;
-    }
-
     template <typename T>
     void lua_push_object(lua_State* L, T obj) {
         if (obj == nullptr) {
@@ -228,7 +221,7 @@ namespace luakit {
     template <typename T>
     T lua_to_object(lua_State* L, int idx) {
         T obj = nullptr; 
-        idx = lua_normal_index(L, idx);
+        idx = lua_absindex(L, idx);
         if (lua_istable(L, idx)) {
             lua_pushstring(L, "__pointer__");
             lua_rawget(L, idx);

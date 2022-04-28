@@ -127,6 +127,10 @@ namespace luakit {
             return vr;
         }
 
+        lua_State* L() { 
+            return m_L;
+        }
+
     protected:
         lua_State* m_L = nullptr;
     };
