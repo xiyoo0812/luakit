@@ -217,7 +217,7 @@ namespace luakit {
 
     inline bool get_table_function(lua_State* L, const char* table, const char* function) {
         lua_getglobal(L, table);
-        if (lua_istable(L, -1)) return false;
+        if (!lua_istable(L, -1)) return false;
         lua_getfield(L, -1, function);
         lua_remove(L, -2);
         return lua_isfunction(L, -1);
