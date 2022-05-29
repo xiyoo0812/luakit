@@ -45,7 +45,7 @@ namespace luakit {
             lua_pushboolean(L, v);
         }
         else if constexpr (std::is_same_v<T, std::string>) {
-            lua_pushstring(L, v.c_str());
+            lua_pushlstring(L, v.c_str(), v.size());
         }
         else if constexpr (std::is_integral_v<T>) {
             lua_pushinteger(L, (lua_Integer)v);
