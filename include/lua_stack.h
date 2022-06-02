@@ -15,8 +15,9 @@ namespace luakit {
             return lua_toboolean(L, i) != 0;
         }
         else if constexpr (std::is_same_v<T, std::string>) {
-            const char* str = lua_tostring(L, i);
-            return str == nullptr ? "" : str;
+            size_t len;
+            const char* str = lua_tolstring(L, i, &len);
+            return str == nullptr ? "" : std::string(str, len);
         }
         else if constexpr (std::is_integral_v<T>) {
             return (T)lua_tointeger(L, i);
