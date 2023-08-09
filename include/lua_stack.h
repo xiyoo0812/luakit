@@ -236,92 +236,79 @@ namespace luakit {
             return;
         }
 
-        const char* meta_name = lua_get_meta_name<T>();
-        luaL_getmetatable(L, meta_name);
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            lua_pushlightuserdata(L, obj);
-            return;
-        }
-
-        // stack: metatab
         lua_getfield(L, LUA_REGISTRYINDEX, "__objects__");
         if (lua_isnil(L, -1)) {
             lua_pop(L, 1);
-            lua_newtable(L);
-
-            lua_newtable(L);
+            lua_createtable(L, 0, 128);
+            lua_createtable(L, 0, 4);
             lua_pushstring(L, "v");
             lua_setfield(L, -2, "__mode");
             lua_setmetatable(L, -2);
-
             lua_pushvalue(L, -1);
             lua_setfield(L, LUA_REGISTRYINDEX, "__objects__");
         }
 
-        // stack: metatab, __objects__
-        const char* pkey = lua_get_object_key<T>(obj);
-        if (lua_getfield(L, -1, pkey) != LUA_TTABLE) {
+        // stack: __objects__
+        size_t pkey = lua_get_object_key(obj);
+        if (lua_geti(L, -1, pkey) != LUA_TTABLE) {
             lua_pop(L, 1);
-            lua_newtable(L);
-            lua_pushstring(L, "__pointer__");
+            lua_createtable(L, 0, 4);
             lua_pushlightuserdata(L, obj);
-            lua_rawset(L, -3);
-
-            // stack: metatab, __objects__, tab 
-            lua_pushvalue(L, -3);
+            lua_setfield(L, -2, "__pointer__");
+            // stack: __objects__, table
+            const char* meta_name = lua_get_meta_name<T>();
+            luaL_getmetatable(L, meta_name);
+            if (lua_isnil(L, -1)) {
+                lua_pop(L, 3);
+                lua_pushlightuserdata(L, obj);
+                return;
+            }
+            // stack: __objects__, table, metatab
             lua_setmetatable(L, -2);
-
             lua_pushvalue(L, -1);
-            lua_setfield(L, -3, pkey);
+            // stack: __objects__, table, table
+            lua_seti(L, -3, pkey);
         }
-        // stack: metatab, __objects__, tab 
-        lua_replace(L, -3);
-        lua_pop(L, 1);
+        // stack: __objects__, table 
+        lua_remove(L, -2);
     }
 
     template <typename T>
     void lua_detach_object(lua_State* L, T obj) {
         if (obj == nullptr)
             return;
-
         lua_getfield(L, LUA_REGISTRYINDEX, "__objects__");
         if (!lua_istable(L, -1)) {
             lua_pop(L, 1);
             return;
         }
-
         // stack: __objects__
-        const char* pkey = lua_get_object_key<T>(obj);
-        if (lua_getfield(L, -1, pkey) != LUA_TTABLE) {
+        size_t pkey = lua_get_object_key(obj);
+        if (lua_geti(L, -1, pkey) != LUA_TTABLE) {
             lua_pop(L, 2);
             return;
         }
-
-        // stack: __objects__, __shadow_object__
-        lua_pushstring(L, "__pointer__");
+        // stack: __objects__, table
         lua_pushnil(L);
-        lua_rawset(L, -3);
-
+        lua_setfield(L, -2, "__pointer__");
+        // stack: __objects__, table
         lua_pushnil(L);
-        lua_rawsetp(L, -3, obj);
+        lua_seti(L, -3, pkey);
         lua_pop(L, 2);
     }
 
     template <typename T>
     T lua_to_object(lua_State* L, int idx) {
+        if (lua_istable(L, idx)) {
+            lua_getfield(L, idx, "__pointer__");
+            T obj = (T)lua_touserdata(L, -1);
+            lua_pop(L, 1);
+            return obj;
+        }
         if (lua_isuserdata(L, idx)) {
             return (T)lua_touserdata(L, idx);
         }
-        T obj = nullptr;
-        if (lua_istable(L, idx)) {
-            idx = lua_absindex(L, idx);
-            lua_pushstring(L, "__pointer__");
-            lua_rawget(L, idx);
-            obj = (T)lua_touserdata(L, -1);
-            lua_pop(L, 1);
-        }
-        return obj;
+        return nullptr;
     }
 
     template<typename... arg_types>
