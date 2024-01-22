@@ -7,10 +7,10 @@ namespace luakit {
     const size_t BUFFER_MAX = 16 * 1024 * 1024; //16M
     const size_t ALIGN_SIZE = 16;               //水位
 
-    class var_buffer {
+    class luabuf {
     public:
-        var_buffer() { _alloc(); }
-        ~var_buffer() { free(m_data); }
+        luabuf() { _alloc(); }
+        ~luabuf() { free(m_data); }
 
         void reset() {
             if (m_size != BUFFER_DEF) {
@@ -32,7 +32,11 @@ namespace luakit {
         size_t empty() {
             return m_tail == m_head;
         }
-        
+
+        uint8_t* head() {
+            return m_head;
+        }
+
         void clean() {
             size_t data_len = m_tail - m_head;
             if (m_size > m_max && data_len < BUFFER_DEF) {
@@ -83,10 +87,10 @@ namespace luakit {
             return 0;
         }
 
-        uint8_t* peek_data(size_t peek_len) {
-            size_t data_len = m_tail - m_head;
+        uint8_t* peek_data(size_t peek_len, size_t offset = 0) {
+            size_t data_len = m_tail - m_head - offset;
             if (peek_len > 0 && data_len >= peek_len) {
-                return m_head;
+                return m_head + offset;
             }
             return nullptr;
         }
@@ -132,9 +136,17 @@ namespace luakit {
             return m_head;
         }
 
-        std::string string() {
+        std::string_view string() {
             size_t len = (size_t)(m_tail - m_head);
-            return std::string((const char*)m_head, len);
+            return std::string_view((const char*)m_head, len);
+        }
+
+        size_t write(const char* src) {
+            return push_data((const uint8_t*)src, strlen(src));
+        }
+
+        size_t write(const std::string& src) {
+            return push_data((const uint8_t*)src.c_str(), src.size());
         }
 
         template<typename T>
@@ -142,8 +154,16 @@ namespace luakit {
             return push_data((const uint8_t*)&value, sizeof(T));
         }
 
-        size_t write(const char* src, size_t len) {
-            return push_data((const uint8_t*)src, len);
+        template<typename T = uint8_t>
+        T* read() {
+            size_t tpe_len = sizeof(T);
+            size_t data_len = m_tail - m_head;
+            if (tpe_len > 0 && data_len >= tpe_len) {
+                uint8_t* head = m_head;
+                m_head += tpe_len;
+                return (T*)head;
+            }
+            return nullptr;
         }
 
     protected:

@@ -48,18 +48,18 @@ namespace luakit {
         }
 
         template <typename... ret_types, typename... arg_types>
-        bool call(const char* function, exception_handler handler, std::tuple<ret_types&...>&& rets, arg_types... args) {
+        bool call(const char* function, error_fn efn, std::tuple<ret_types&...>&& rets, arg_types... args) {
             if (!get_function(function)) return false;
-            return lua_call_function(m_L, handler, std::forward<std::tuple<ret_types&...>>(rets), std::forward<arg_types>(args)...);
+            return lua_call_function(m_L, efn, std::forward<std::tuple<ret_types&...>>(rets), std::forward<arg_types>(args)...);
         }
 
-        bool call(const char* function, exception_handler handler = nullptr) {
+        bool call(const char* function, error_fn efn = nullptr) {
             if (!get_function(function)) return false;
-            return lua_call_function(m_L, handler, std::tie());
+            return lua_call_function(m_L, efn, std::tie());
         }
 
-        bool call(exception_handler handler = nullptr) {
-            return lua_call_function(m_L, handler, std::tie());
+        bool call(error_fn efn = nullptr) {
+            return lua_call_function(m_L, efn, std::tie());
         }
 
         void create_with() {}
@@ -74,7 +74,7 @@ namespace luakit {
         lua_table new_enum(const char* name, enum_value... args) {
             lua_guard g(m_L);
             lua_rawgeti(m_L, LUA_REGISTRYINDEX, m_index);
-            lua_newtable(m_L);
+            lua_createtable(m_L, 0, 8);
             lua_pushstring(m_L, name);
             lua_pushvalue(m_L, -2);
             lua_settable(m_L, -4);
