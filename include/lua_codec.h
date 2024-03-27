@@ -108,11 +108,21 @@ namespace luakit {
     inline void table_encode(lua_State* L, luabuf* buff, int index, int depth) {
         index = lua_absindex(L, index);
         value_encode(buff, type_tab_head);
-        lua_pushnil(L);
-        while (lua_next(L, index) != 0) {
-            encode_one(L, buff, -2, depth);
-            encode_one(L, buff, -1, depth);
-            lua_pop(L, 1);
+        size_t rawlen = lua_rawlen(L, index);
+        if (is_array(L, index, rawlen)) {
+            for (int i = 1; i <= rawlen; ++i) {
+                lua_rawgeti(L, index, i);
+                integer_encode(buff, i);
+                encode_one(L, buff, -1, depth);
+                lua_pop(L, 1);
+            }
+        } else {
+            lua_pushnil(L);
+            while (lua_next(L, index) != 0) {
+                encode_one(L, buff, -2, depth);
+                encode_one(L, buff, -1, depth);
+                lua_pop(L, 1);
+            }
         }
         value_encode(buff, type_tab_tail);
     }
@@ -263,8 +273,9 @@ namespace luakit {
         serialize_value(buff, r);
     }
 
-    inline void serialize_udata(luabuf* buff, const char* data) {
-        serialize_quote(buff, data ? data : "userdata(null)", "'", "'");
+    inline void serialize_udata(luabuf* buff, void* data) {
+        std::string udata = "userdata:" + std::to_string((size_t)data);
+        serialize_quote(buff, udata.c_str(), "'", "'");
     }
 
     inline void serialize_crcn(luabuf* buff, int count, int line) {
@@ -287,19 +298,17 @@ namespace luakit {
     }
 
     inline void serialize_table(lua_State* L, luabuf* buff, int index, int depth, int line) {
+        int size = 0;
         index = lua_absindex(L, index);
         size_t rawlen = lua_rawlen(L, index);
-        bool barray = is_array(L, index, rawlen);
-
-        int size = 0;
         serialize_value(buff, "{");
-        if (barray) {
+        if (is_array(L, index, rawlen)) {
             for (int i = 1; i <= rawlen; ++i){
                 if (size++ > 0) {
                     serialize_value(buff, ",");
                 }
                 serialize_crcn(buff, depth, line);
-                lua_geti(L, index, i);
+                lua_rawgeti(L, index, i);
                 serialize_one(L, buff, -1, depth, line);
                 lua_pop(L, 1);
             }
@@ -309,6 +318,7 @@ namespace luakit {
                 lua_guard g(L);
                 lua_pushvalue(L, 3);
                 lua_pushvalue(L, index);
+                //执行sort方法，再序列化
                 if (lua_pcall(L, 1, 1, -2)) {
                     luaL_error(L, lua_tostring(L, -1));
                     return;
@@ -393,7 +403,7 @@ namespace luakit {
             break;
         case LUA_TUSERDATA:
         case LUA_TLIGHTUSERDATA:
-            serialize_udata(buff, lua_tostring(L, index));
+            serialize_udata(buff, lua_touserdata(L, index));
             break;
         default:
             serialize_quote(buff, lua_typename(L, type), "'unsupport(", ")'");
