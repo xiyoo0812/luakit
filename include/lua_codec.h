@@ -16,16 +16,18 @@ namespace luakit {
     const uint8_t type_int16        = 6;
     const uint8_t type_int32        = 7;
     const uint8_t type_int64        = 8;
-    const uint8_t type_sstring      = 9;
-    const uint8_t type_lstring      = 10;
-    const uint8_t type_istring      = 11;
-    const uint8_t type_strindex     = 12;
-    const uint8_t type_undefine     = 13;
-    const uint8_t type_max          = 14;
+    const uint8_t type_string8      = 9;
+    const uint8_t type_string16     = 10;
+    const uint8_t type_string32     = 11;
+    const uint8_t type_istring      = 12;
+    const uint8_t type_strindex     = 13;
+    const uint8_t type_undefine     = 14;
+    const uint8_t type_max          = 15;
 
     const uint8_t max_encode_depth  = 16;
     const uint8_t max_share_string  = 128;
     const uint8_t max_uint8         = UCHAR_MAX - type_max;
+    const uint32_t max_string_size  = 0xffffff;
 
     inline thread_local std::vector<std::string_view> t_sshares(max_share_string);
 
@@ -63,12 +65,15 @@ namespace luakit {
     }
 
     inline void string_write(luabuf* buff, const char* ptr, size_t sz) {
-        if (sz > UCHAR_MAX) {
-            value_encode(buff, type_lstring);
+        if (sz <= UCHAR_MAX) {
+            value_encode(buff, type_string8);
+            value_encode<uint8_t>(buff, sz);
+        } else if (sz <= USHRT_MAX) {
+            value_encode(buff, type_string16);
             value_encode<uint16_t>(buff, sz);
         } else {
-            value_encode(buff, type_sstring);
-            value_encode<uint8_t>(buff, sz);
+            value_encode(buff, type_string32);
+            value_encode<uint32_t>(buff, sz);
         }
         if (sz > 0) {
             value_encode(buff, ptr, sz);
@@ -78,8 +83,8 @@ namespace luakit {
     inline void string_encode(lua_State* L, luabuf* buff, int index) {
         size_t sz = 0;
         const char* ptr = lua_tolstring(L, index, &sz);
-        if (sz > USHRT_MAX) {
-            luaL_error(L, "encode can't pack too long string");
+        if (sz >= max_string_size) {
+            luaL_error(L, "encode string can't pack too long (%d) string", sz);
             return;
         }
         string_write(buff, ptr, sz);
@@ -89,7 +94,7 @@ namespace luakit {
         size_t sz = 0;
         const char* ptr = lua_tolstring(L, index, &sz);
         if (sz > USHRT_MAX) {
-            luaL_error(L, "encode can't pack too long string");
+            luaL_error(L, "encode index can't pack too long (%d) string", sz);
             return;
         }
         if (sz > UCHAR_MAX || sz == 0) {
@@ -103,7 +108,7 @@ namespace luakit {
                 value_encode(buff, type_istring);
                 t_sshares.push_back(value);
             } else {
-                value_encode(buff, type_sstring);
+                value_encode(buff, type_string8);
             }
             value_encode<uint8_t>(buff, sz);
             value_encode(buff, ptr, sz);
@@ -199,13 +204,13 @@ namespace luakit {
         return 1;
     }
 
-    inline void string_decode(lua_State* L, uint16_t sz, slice* slice, bool isindex = false) {
+    inline void string_decode(lua_State* L, uint32_t sz, slice* slice, bool isindex = false) {
         if (sz == 0) {
             lua_pushstring(L, "");
             return;
         }
         auto str = (const char*)slice->peek(sz);
-        if (str == nullptr || sz > USHRT_MAX) {
+        if (str == nullptr || sz > max_string_size) {
             throw lua_exception("decode string is out of range");
         }
         slice->erase(sz);
@@ -244,11 +249,14 @@ namespace luakit {
         case type_number:
             lua_pushnumber(L, value_decode<double>(slice));
             break;
-        case type_sstring:
+        case type_string8:
             string_decode(L, value_decode<uint8_t>(slice), slice);
             break;
-        case type_lstring:
+        case type_string16:
             string_decode(L, value_decode<uint16_t>(slice), slice);
+            break;
+        case type_string32:
+            string_decode(L, value_decode<uint32_t>(slice), slice);
             break;
         case type_istring:
             string_decode(L, value_decode<uint8_t>(slice), slice, true);
