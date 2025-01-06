@@ -182,7 +182,7 @@ namespace luakit {
         }
     }
 
-    inline slice* encode_slice(lua_State* L, luabuf* buff, size_t index, size_t num) {
+    inline slice* encode_slice(lua_State* L, luabuf* buff, size_t index, int num) {
         if (num > UCHAR_MAX || num < 0) {
             luaL_error(L, "encode can't pack too many args");
         }
@@ -503,7 +503,7 @@ namespace luakit {
             return decode_slice(L, m_slice);
         }
         virtual uint8_t* encode(lua_State* L, int index, size_t* len) {
-            size_t n = lua_gettop(L) - index + 1;
+            int n = lua_gettop(L) - index + 1;
             slice* slice = encode_slice(L, m_buf, index, n);
             return slice->data(len);
         }
