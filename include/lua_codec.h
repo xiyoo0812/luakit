@@ -379,7 +379,7 @@ namespace luakit {
                 lua_pushvalue(L, 3);
                 lua_pushvalue(L, index);
                 //执行sort方法，再序列化
-                if (lua_pcall(L, 1, 1, -2)) {
+                if (lua_pcall(L, 1, 1, 0)) {
                     luaL_error(L, lua_tostring(L, -1));
                     return;
                 }
