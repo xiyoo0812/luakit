@@ -1,41 +1,44 @@
 ﻿#pragma once
 
-#include <set>
-#include <map>
-#include <list>
-#include <tuple>
 #include <mutex>
+#include <format>
 #include <atomic>
 #include <string>
-#include <vector>
-#include <memory>
-#include <utility>
 #include <cstdint>
+#include <typeindex>
 #include <stdexcept>
 #include <functional>
 #include <type_traits>
-#include <string.h>
+#include <string_view>
+#include <unordered_map>
 
-extern "C"
-{
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
+extern "C" {
+    #include "lua.h"
+    #include "lualib.h"
+    #include "lauxlib.h"
 }
 
 namespace luakit {
 
-    #define MAX_LUA_META_KEY 128
+    const int MAX_LUA_META_KEY = 128;
+
+    template<typename T>
+    concept arithmetic = std::is_arithmetic_v<T>;
 
     //错误函数
     using error_fn = std::function<void(std::string_view err)>;
 
     template<typename T>
-    const char* lua_get_meta_name() {
-        thread_local char meta_name[MAX_LUA_META_KEY];
+    std::string lua_get_meta_name() {
         using OT = std::remove_cv_t<std::remove_pointer_t<T>>;
-        snprintf(meta_name, MAX_LUA_META_KEY, "__lua_class_meta_%zu__", typeid(OT).hash_code());
-        return meta_name;
+        auto type = std::type_index(typeid(OT));
+        static thread_local std::unordered_map<std::type_index, std::string> cache;
+        if (auto it = cache.find(type); it != cache.end()) {
+            return it->second;
+        }
+        auto name = std::format("__lua_class_meta_{}_{}__", type.name(), type.hash_code());
+        cache.emplace(type, name);
+        return name;
     }
 
     inline size_t lua_get_object_key(void* obj) {
@@ -70,6 +73,44 @@ namespace luakit {
             curlen++;
         }
         return curlen == raw_len;
+    }
+
+    inline bool lua_string_starts_with(lua_State* L, std::string_view str, std::string_view with) {
+        return str.starts_with(with);
+    }
+
+    inline bool lua_string_ends_with(lua_State* L, std::string_view str, std::string_view with) {
+        return str.ends_with(with);
+    }
+
+    inline char* lua_string_title(char* str) {
+        if (str && *str) *str = std::toupper(static_cast<unsigned char>(*str));
+        return str;
+    }
+
+    inline char* lua_string_untitle(char* str) {
+        if (str && *str) *str = std::tolower(static_cast<unsigned char>(*str));
+        return str;
+    }
+
+    inline int lua_string_split(lua_State* L, std::string_view str, std::string_view delim) {
+        size_t step = delim.size();
+        if (step == 0) luaL_error(L, "delimiter cannot be empty");
+        size_t cur = 0, len = 0;
+        size_t pos = str.find(delim);
+        bool pack = luaL_opt(L, lua_toboolean, 3, true);
+        if (pack) lua_createtable(L, 8, 0);
+        while (pos != std::string_view::npos) {
+            lua_pushlstring(L, str.data() + cur, pos - cur);
+            if (pack) lua_seti(L, -2, ++len);
+            cur = pos + step;
+            pos = str.find(delim, cur);
+        }
+        if (str.size() > cur) {
+            lua_pushlstring(L, str.data() + cur, str.size() - cur);
+            if (pack) lua_seti(L, -2, ++len);
+        }
+        return (pack) ? 1 : (int)len;
     }
 
     class lua_exception : public std::logic_error {
