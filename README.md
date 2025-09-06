@@ -1,8 +1,8 @@
 # luakit
-一个基于C++23的lua绑定库。
+一个基于C++20的lua绑定库。
 
 # 依赖
-- c++23
+- c++20
 - [lua](https://github.com/xiyoo0812/lua.git)5.2以上
 - 项目路径如下<br>
   |--proj <br>
