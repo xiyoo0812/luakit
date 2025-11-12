@@ -5,6 +5,7 @@
 #endif
 
 #include "lua_buff.h"
+#include "lua_extend.h"
 
 namespace luakit {
     const uint8_t type_nil          = 0;
@@ -217,12 +218,10 @@ namespace luakit {
     inline void table_decode(lua_State* L, slice* slice) {
         lua_createtable(L, 0, 8);
         do {
-            if (decode_one(L, slice) == type_tab_tail) {
-                break;
-            }
+            if (decode_one(L, slice) == type_tab_tail) break;
             decode_one(L, slice);
             lua_rawset(L, -3);
-        } while (1);
+        } while (true);
     }
 
     inline void decode_value(lua_State* L, slice* slice, uint8_t type) {
@@ -289,12 +288,12 @@ namespace luakit {
         int top = lua_gettop(L);
         uint8_t argnum = slice->read();
         lua_checkstack(L, argnum);
-        while (1) {
+        while (!slice->empty()) {
             decode_value(L, slice, slice->read());
         }
         int getnum = lua_gettop(L) - top;
         if (argnum != getnum) {
-            throw lua_exception("decode arg num expect %d, but get %d", argnum, getnum);
+            throw lua_exception("decode arg num expect {}, but get {}", argnum, getnum);
         }
         return getnum;
     }
@@ -495,6 +494,13 @@ namespace luakit {
             int n = lua_gettop(L) - index + 1;
             slice* slice = encode_slice(L, m_buf, index, n);
             return slice->data(len);
+        }
+        virtual uint8_t* encode(lua_State* L, uint8_t* data, size_t* len) {
+            luaL_error(L, "encode not implended!");
+            return nullptr;
+        }
+        virtual uint8_t* decode(uint8_t* data, size_t* len) {
+            throw lua_exception("decode not implended!");
         }
         size_t decode(lua_State* L, uint8_t* data, size_t len) {
             slice mslice(data, len);
