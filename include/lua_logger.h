@@ -10,7 +10,7 @@ namespace luakit {
         }
 
         template <typename... Args>
-        void output(const char* method, std::string_view fmt, Args&&... args) {
+        void output(cpchar method, vstring fmt, Args&&... args) {
             auto msg = std::vformat(fmt, std::make_format_args(args...));
             if (m_L) {
                 lua_guard g(m_L);
