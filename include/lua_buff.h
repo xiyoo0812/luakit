@@ -4,7 +4,7 @@
 
 namespace luakit {
 
-    const size_t BUFFER_DEF = 64 * 1024;        //64K
+    const size_t BUFFER_DEF = 8 * 1024;         //4K
     const size_t BUFFER_MAX = 16 * 1024 * 1024; //16M
     const size_t ALIGN_SIZE = 16;               //水位
 
@@ -92,7 +92,7 @@ namespace luakit {
         }
 
         inline size_t pop_size(size_t erase_len) {
-            if (m_head + erase_len <= m_tail) {
+            if (erase_len > 0 && m_head + erase_len <= m_tail) {
                 m_head += erase_len;
                 size_t data_len = (size_t)(m_tail - m_head);
                 if (m_size > m_max && data_len < BUFFER_DEF) {
@@ -146,6 +146,13 @@ namespace luakit {
                 }
             }
             return m_tail;
+        }
+
+        inline uint8_t* drain(size_t* len) {
+            *len = (size_t)(m_tail - m_head);
+            auto data = m_head;
+            m_head = m_tail;
+            return data;
         }
 
         inline uint8_t* data(size_t* len) {
