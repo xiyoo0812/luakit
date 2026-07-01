@@ -345,6 +345,37 @@ namespace luakit {
         serialize_value(buff, "'");
     }
 
+    inline void serialize_kv(lua_State* L, luabuf* buff, int& size, int depth, size_t line) {
+        if (lua_type(L, -2) == LUA_TSTRING) {
+            vstring val = lua_to_native<vstring>(L, -2);
+            if (val.starts_with("__")) return;
+        }
+        if (size++ > 0) {
+            serialize_value(buff, ",");
+        }
+        serialize_crcn(buff, depth, line);
+        if (lua_type(L, -2) == LUA_TNUMBER) {
+            lua_pushvalue(L, -2);
+            serialize_quote(buff, lua_tostring(L, -2), "[", "]=");
+            lua_pop(L, 1);
+        } else if (lua_type(L, -2) == LUA_TSTRING) {
+            vstring val = lua_to_native<vstring>(L, -2);    
+            if (std::any_of(val.begin(), val.end(), [](char c) {
+                return !std::isdigit(static_cast<unsigned char>(c));
+            })){
+                serialize_value(buff, val.data());
+                serialize_value(buff, "=");
+            } else {
+                serialize_quote(buff, val.data(), "[", "]=");
+            }
+        } else {
+            serialize_value(buff, "[");
+            serialize_one(L, buff, -2, depth, line);
+            serialize_value(buff, "]=");
+        }
+        serialize_one(L, buff, -1, depth, line);
+    }
+
     inline void serialize_table(lua_State* L, luabuf* buff, int index, int depth, size_t line) {
         int size = 0;
         index = lua_absindex(L, index);
@@ -360,8 +391,7 @@ namespace luakit {
                 serialize_one(L, buff, -1, depth, line);
                 lua_pop(L, 1);
             }
-        }
-        else {
+        } else {
             if (lua_type(L, 3) == LUA_TFUNCTION) {
                 lua_guard g(L);
                 lua_pushvalue(L, 3);
@@ -374,50 +404,15 @@ namespace luakit {
                 index = lua_absindex(L, -1);
                 lua_pushnil(L);
                 while (lua_next(L, index) != 0) {
-                    if (size++ > 0) {
-                        serialize_value(buff, ",");
-                    }
                     lua_geti(L, -1, 1);
                     lua_geti(L, -2, 2);
-                    serialize_crcn(buff, depth, line);
-                    if (lua_type(L, -2) == LUA_TNUMBER) {
-                        lua_pushvalue(L, -2);
-                        serialize_quote(buff, lua_tostring(L, -1), "[", "]=");
-                        lua_pop(L, 1);
-                    }
-                    else if (lua_type(L, -2) == LUA_TSTRING) {
-                        serialize_value(buff, lua_tostring(L, -2));
-                        serialize_value(buff, "=");
-                    }
-                    else {
-                        serialize_one(L, buff, -2, depth, line);
-                        serialize_value(buff, "=");
-                    }
-                    serialize_one(L, buff, -1, depth, line);
+                    serialize_kv(L, buff, size, depth, line);
                     lua_pop(L, 3);
                 }
-            }
-            else {
+            } else {
                 lua_pushnil(L);
                 while (lua_next(L, index) != 0) {
-                    if (size++ > 0) {
-                        serialize_value(buff, ",");
-                    }
-                    serialize_crcn(buff, depth, line);
-                    if (lua_type(L, -2) == LUA_TNUMBER) {
-                        lua_pushvalue(L, -2);
-                        serialize_quote(buff, lua_tostring(L, -1), "[", "]=");
-                        lua_pop(L, 1);
-                    }
-                    else if (lua_type(L, -2) == LUA_TSTRING) {
-                        serialize_value(buff, lua_tostring(L, -2));
-                        serialize_value(buff, "=");
-                    }
-                    else {
-                        serialize_one(L, buff, -2, depth, line);
-                        serialize_value(buff, "=");
-                    }
-                    serialize_one(L, buff, -1, depth, line);
+                    serialize_kv(L, buff, size, depth, line);
                     lua_pop(L, 1);
                 }
             }
@@ -506,7 +501,7 @@ namespace luakit {
         }
         virtual uint8_t* encode(lua_State* L, int index, size_t* len) {
             int n = lua_gettop(L) - index + 1;
-            slice* slice = encode_slice(L, &m_buf, index, n);
+            slice* slice = encode_slice(L, m_buf, index, n);
             return slice->data(len);
         }
         virtual uint8_t* decode(uint8_t* data, size_t* len) {
@@ -521,22 +516,23 @@ namespace luakit {
         }
         template<typename... Args>
         uint8_t* encode(size_t* len, uint8_t num, Args&&... args) {
-            m_buf.clean();
-            value_encode(&m_buf, num);
-            (typeval_encode(&m_buf, std::forward<Args>(args)), ...);
-            return m_buf.data(len);
+            m_buf->clean();
+            value_encode(m_buf, num);
+            (typeval_encode(m_buf, std::forward<Args>(args)), ...);
+            return m_buf->data(len);
         }
         virtual void set_slice(slice* slice) {
             m_slice = slice;
             m_packet_len = 0;
         }
-        virtual luabuf* get_buff() { return &m_buf; }
+        virtual luabuf* get_buff() { return m_buf; }
         virtual size_t get_packet_len() { return m_packet_len; }
+        virtual void set_buff(luabuf* buf) { m_buf = buf; }
         virtual void set_tag(vstring tag) { m_tag = tag; }
 
     protected:
-        luabuf m_buf;
         sstring m_tag = "";
+        luabuf* m_buf = nullptr;
         slice* m_slice = nullptr;
         uint32_t m_packet_len = 0;
     };
@@ -555,7 +551,7 @@ namespace luakit {
         }
 
         virtual uint8_t* encode(lua_State* L, int index, size_t* len) {
-            slice* slice = encode_slice(L, &m_buf, index, 1);
+            slice* slice = encode_slice(L, m_buf, index, 1);
             return slice->data(len);
         }
     };
